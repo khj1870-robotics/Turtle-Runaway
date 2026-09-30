@@ -6,20 +6,20 @@
 
 <table>
   <tr>
-    <td><img src="turtle_runaway_2.png" width="100%"></td>
-    <td><img src="turtle_runaway_3.png" width="100%"></td>
-  </tr>
-  <tr>
     <td align="center"><b>게임 시작</b></td>
     <td align="center"><b>게임 중</b></td>
   </tr>
   <tr>
-    <td><img src="turtle_runaway_4.png" width="100%"></td>
-    <td><img src="turtle_runaway_5.png" width="100%"></td>
+    <td><img src="turtle_runaway_2.png" width="100%"></td>
+    <td><img src="turtle_runaway_3.png" width="100%"></td>
   </tr>
   <tr>
     <td align="center"><b>라운드 종료</b></td>    
     <td align="center"><b>게임 종료</b></td>
+  </tr>
+  <tr>
+    <td><img src="turtle_runaway_4.png" width="100%"></td>
+    <td><img src="turtle_runaway_5.png" width="100%"></td>
   </tr>
 </table>
 
