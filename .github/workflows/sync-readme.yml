@@ -5,6 +5,10 @@ on:
     paths:
       - 'turtle_runaway.md'
 
+# 깃허브 액션 봇에게 저장소 쓰기 권한을 명시적으로 부여합니다
+permissions:
+  contents: write
+
 jobs:
   sync:
     runs-on: ubuntu-latest
