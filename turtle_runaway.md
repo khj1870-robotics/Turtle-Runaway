@@ -3,6 +3,9 @@
 > 8비트 도트 콜로세움에서 벌어지는 파랑 거북이와 빨강 거북이의 술래잡기
 
 ![Turtle Runaway](turtle_runaway_1.png)
+![Turtle Runaway](turtle_runaway_2.png)
+![Turtle Runaway](turtle_runaway_3.png)
+![Turtle Runaway](turtle_runaway_4.png)
 
 ---
 
