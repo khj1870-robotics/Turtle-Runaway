@@ -27,7 +27,7 @@
 
 ---
 
-## 게임 방법
+## 게임 방법 
 
 **실행:** `python turtle_runaway.py` (Spyder에서는 IPython 콘솔에 `!python turtle_runaway.py`)
 - `sounds/` 폴더가 `turtle_runaway.py`와 같은 폴더에 있어야 소리가 납니다. 폴더가 없어도 게임은 소리 없이 실행됩니다.
