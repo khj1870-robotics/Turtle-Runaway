@@ -825,7 +825,7 @@ class Art:
 # Sound: free chiptune music and effects from the 'sounds' folder (CC0, see sounds/CREDITS.txt)
 # ---------------------------------------------------------------------------
 SOUND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sounds')
-SOUND_VOLUME = 0.35
+SOUND_VOLUME = 0.25
 SOUNDS = ['music_title', 'music_play', 'music_hurry', 'music_end', 'crowd', 'cheer', 'select', 'click',
           'ready', 'go', 'tick', 'alarm', 'charge', 'catch', 'win', 'lose', 'coin', 'gameover', 'fanfare']
 
@@ -847,6 +847,7 @@ while (true) {
             sounds[p[1]].setVolume(p.length > 3 ? parseFloat(p[3]) : 1.0);
         }
         else if (s && p[0] == 'stop') s.stop;
+        else if (s && p[0] == 'volume') s.setVolume(parseFloat(p[2]));
         else if (s) { s.stop; s.setLoops(p[0] == 'loop'); s.play; }
     });
 }
@@ -859,6 +860,9 @@ class Sound:
     def __init__(self):
         self.on, self.song, self.song_started, self.song_at, self.crowd_on = True, None, False, 0.0, False
         self.send, self.poll, self.quit = None, None, None
+        self.set_backend_volume = None
+        self.needs_restart_for_volume = False
+        self.volume = max(0.0, min(1.0, SOUND_VOLUME))
         self.files = {name: os.path.join(SOUND_DIR, name + '.wav') for name in SOUNDS}
         if not all(os.path.exists(path) for path in self.files.values()):
             return
@@ -879,7 +883,12 @@ class Sound:
             helper.stdin.write(f'{command}\t{name}\n')
             helper.stdin.flush()
         for name, path in self.files.items():
-            helper.stdin.write(f'load\t{name}\t{path}\t{SOUND_VOLUME}\n')
+            helper.stdin.write(f'load\t{name}\t{path}\t{self.volume}\n')
+        def set_volume(volume):
+            for name in self.files:
+                helper.stdin.write(f'volume\t{name}\t{volume}\n')
+            helper.stdin.flush()
+        self.set_backend_volume = set_volume
         self.send, self.quit = send, lambda: helper.stdin.close()
 
     def start_windows(self):
@@ -890,9 +899,12 @@ class Sound:
         if not all(opened):
             mci('close all', None, 0, None)
             return
-        volume = max(0, min(1000, int(round(SOUND_VOLUME * 1000))))
-        for name in self.files:
-            mci(f'setaudio {name} volume to {volume}', None, 0, None)
+        def set_volume(volume):
+            value = max(0, min(1000, int(round(volume * 1000))))
+            for name in self.files:
+                mci(f'setaudio {name} volume to {value}', None, 0, None)
+        self.set_backend_volume = set_volume
+        set_volume(self.volume)
         mode, loops = ctypes.create_unicode_buffer(32), set()
         def send(command, name):
             loops.discard(name)
@@ -911,11 +923,8 @@ class Sound:
         if not player:
             return
         player_name = os.path.basename(player)
-        volume_args = []
-        if player_name == 'paplay':
-            volume = max(0, min(65536, int(round(SOUND_VOLUME * 65536))))
-            volume_args = [f'--volume={volume}']
         # aplay has no reliable per-process volume option; it uses the system output level.
+        self.needs_restart_for_volume = True
         playing, loops = {}, set()
         def send(command, name):
             old, _ = playing.pop(name, (None, 0))
@@ -923,7 +932,11 @@ class Sound:
                 old.terminate()
             loops.discard(name)
             if command != 'stop':
-                process = subprocess.Popen([player, *volume_args, self.files[name]],
+                args = []
+                if player_name == 'paplay':
+                    volume = max(0, min(65536, int(round(self.volume * 65536))))
+                    args = [f'--volume={volume}']
+                process = subprocess.Popen([player, *args, self.files[name]],
                                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 playing[name] = (process, time.monotonic())
                 if command == 'loop':
@@ -982,6 +995,28 @@ class Sound:
         if self.poll:
             self.poll()
 
+    def set_volume(self, percent):
+        try:
+            level = float(percent)
+        except (TypeError, ValueError):
+            return
+        level = max(0.0, min(100.0, level))
+        volume = level / 100.0
+        if abs(volume - self.volume) < 1e-9:
+            return
+        self.volume = volume
+        if self.set_backend_volume:
+            try:
+                self.set_backend_volume(self.volume)
+            except Exception:
+                self.close()
+                return
+        if self.needs_restart_for_volume and self.on:
+            if self.song and self.song_started:
+                self.command('loop', self.song)
+            if self.crowd_on:
+                self.command('loop', 'crowd')
+
     def close(self):
         if self.quit:
             try:
@@ -1029,6 +1064,8 @@ class RunawayGame:
         self.keyboard = ManualMover(canvas)
         self.ai = {'runner': RunawayMover(), 'chaser': ChaseMover()}
         self.mode, self.color, self.menu_row = 'runner', 'blue', 0
+        self.volume = int(round(self.sound.volume * 100))
+        self.volume_slider, self.volume_slider_item = None, None
         self.assign_roles()
 
         # Pixel-art arena at the bottom of the canvas, split into small tiles so that
@@ -1184,13 +1221,15 @@ class RunawayGame:
             self.cv.itemconfig(self.items['menu_cursor'], state='normal' if int(t * 3) % 2 == 0 else 'hidden')
 
     def show_menu(self):
-        self.show_image('menu', ('panel', 150, 50), lambda: panel_bitmap(150, 50), None, 121)
-        self.show_text('menu_mode', 'MODE', 131, GOLD, x=56, style='plain')
-        self.show_text('menu_color', 'COLOR', 153, GOLD, x=56, style='plain')
-        self.show_button('start', 'START', 176, self.confirm)
-        self.show_text('hint', 'ARROWS: SELECT   SPACE: START', 198)
-        self.show_text('hint2', 'M: SOUND ON/OFF', 210, GRAY)
+        self.show_image('menu', ('panel', 150, 66), lambda: panel_bitmap(150, 66), None, 113)
+        self.show_text('menu_mode', 'MODE', 123, GOLD, x=56, style='plain')
+        self.show_text('menu_color', 'COLOR', 145, GOLD, x=56, style='plain')
+        self.show_text('menu_volume', 'VOLUME', 167, GOLD, x=56, style='plain')
+        self.show_button('start', 'START', 192, self.confirm)
+        self.show_text('hint', 'ARROWS: SELECT   SPACE: START', 214)
+        self.show_text('hint2', 'M: SOUND ON/OFF', 226, GRAY)
         self.refresh_menu()
+        self.show_volume_slider()
 
     def refresh_menu(self):
         for row, (attr, options) in enumerate(MENU):
@@ -1533,7 +1572,37 @@ class RunawayGame:
                 self.cv.delete(item)
                 del self.items[name]
         if tag == 'ui':
+            self.hide_volume_slider()
             self.cv.config(cursor='')
+
+    def show_volume_slider(self):
+        if self.volume_slider is None:
+            self.volume_slider = tk.Scale(self.cv, from_=0, to=100, orient='horizontal', length=110,
+                                          showvalue=False, highlightthickness=0, sliderlength=12,
+                                          troughcolor=SLATE, bg=NAVY, activebackground=GOLD,
+                                          command=self.set_volume)
+            x, y = to_canvas(87, 168)
+            self.volume_slider_item = self.cv.create_window(x, y, window=self.volume_slider, anchor='nw', tags=('ui',))
+        self.volume_slider.set(self.volume)
+
+    def hide_volume_slider(self):
+        if self.volume_slider_item is not None:
+            self.cv.delete(self.volume_slider_item)
+            self.volume_slider_item = None
+        if self.volume_slider is not None:
+            self.volume_slider.destroy()
+            self.volume_slider = None
+
+    def set_volume(self, value):
+        try:
+            level = int(round(float(value)))
+        except (TypeError, ValueError):
+            return
+        level = max(0, min(100, level))
+        if level == self.volume:
+            return
+        self.volume = level
+        self.sound.set_volume(level)
 
     def restack(self):
         '''Keep the layers in order: arena < dust < king < turtles < effects < HUD < UI < confetti.'''
