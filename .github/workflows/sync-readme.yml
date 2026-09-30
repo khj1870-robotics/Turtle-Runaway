@@ -1,0 +1,24 @@
+name: Sync Readme
+
+on:
+  push:
+    paths:
+      - 'turtle_runaway.md'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Copy file to README.md
+        run: cp turtle_runaway.md README.md
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@://github.com"
+          git add README.md
+          git commit -m "docs: Sync turtle_runaway.md to README.md" || exit 0
+          git push
