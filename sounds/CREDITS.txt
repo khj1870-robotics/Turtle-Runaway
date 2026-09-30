@@ -1,0 +1,41 @@
+Sounds used in Turtle Runaway
+=============================
+
+All sounds are free and released under CC0 (public domain): they can be used without
+permission or attribution. They are credited here anyway, with thanks to the authors.
+For the game they were converted to 22050 Hz mono WAV, trimmed, looped and levelled.
+
+Music
+-----
+music_title.wav   "Flowerbed Fields [Loop]" by Zane Little Music (first half, looped)
+                  https://opengameart.org/content/flowerbed-fields-loop
+music_play.wav    "Puppy Playing in The Garden" by spring (first 24 bars)
+music_hurry.wav   the same song, first 8 bars played 25% faster
+                  https://opengameart.org/content/puppy-playing-in-the-garden
+music_end.wav     "8-Bit Victory Loop" by wolfgang
+                  https://opengameart.org/content/8-bit-victory-loop
+fanfare.wav       "Victory" by celestialghost8
+                  https://opengameart.org/content/victory
+
+Crowd
+-----
+cheer.wav         "Crowd Cheer" by FoolBoyMedia (first 3 seconds)
+                  https://freesound.org/people/FoolBoyMedia/sounds/397434/
+crowd.wav         "Crowd Cheer II" by FoolBoyMedia (10 seconds, looped)
+                  https://freesound.org/people/FoolBoyMedia/sounds/397435/
+
+Sound effects
+-------------
+"The Essential Retro Video Game Sound Effects Collection [512 sounds]" by Juhani Junkala
+https://opengameart.org/content/512-sound-effects-8-bit-style
+    select.wav    sfx_menu_move4          click.wav   sfx_menu_select1
+    ready.wav     sfx_sounds_Blip6        go.wav      sfx_sounds_powerup5
+    catch.wav     sfx_sounds_impact2      coin.wav    sfx_coin_double4
+    charge.wav    sfx_sounds_high6        win.wav     sfx_sounds_fanfare1
+
+"Music Jingles" by Kenney - https://kenney.nl/assets/music-jingles
+    lose.wav      jingles_NES04           gameover.wav  jingles_NES00
+    alarm.wav     jingles_NES13
+
+"Interface Sounds" by Kenney - https://kenney.nl/assets/interface-sounds
+    tick.wav      tick_004
