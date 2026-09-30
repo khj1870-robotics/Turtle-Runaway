@@ -825,6 +825,7 @@ class Art:
 # Sound: free chiptune music and effects from the 'sounds' folder (CC0, see sounds/CREDITS.txt)
 # ---------------------------------------------------------------------------
 SOUND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sounds')
+SOUND_VOLUME = 0.35
 SOUNDS = ['music_title', 'music_play', 'music_hurry', 'music_end', 'crowd', 'cheer', 'select', 'click',
           'ready', 'go', 'tick', 'alarm', 'charge', 'catch', 'win', 'lose', 'coin', 'gameover', 'fanfare']
 
@@ -841,7 +842,10 @@ while (true) {
     rest = lines.pop();
     lines.forEach(function (line) {
         var p = line.split('\t'), s = sounds[p[1]];
-        if (p[0] == 'load') sounds[p[1]] = $.NSSound.alloc.initWithContentsOfFileByReference(p[2], false);
+        if (p[0] == 'load') {
+            sounds[p[1]] = $.NSSound.alloc.initWithContentsOfFileByReference(p[2], false);
+            sounds[p[1]].setVolume(p.length > 3 ? parseFloat(p[3]) : 1.0);
+        }
         else if (s && p[0] == 'stop') s.stop;
         else if (s) { s.stop; s.setLoops(p[0] == 'loop'); s.play; }
     });
@@ -875,7 +879,7 @@ class Sound:
             helper.stdin.write(f'{command}\t{name}\n')
             helper.stdin.flush()
         for name, path in self.files.items():
-            helper.stdin.write(f'load\t{name}\t{path}\n')
+            helper.stdin.write(f'load\t{name}\t{path}\t{SOUND_VOLUME}\n')
         self.send, self.quit = send, lambda: helper.stdin.close()
 
     def start_windows(self):
@@ -886,6 +890,9 @@ class Sound:
         if not all(opened):
             mci('close all', None, 0, None)
             return
+        volume = max(0, min(1000, int(round(SOUND_VOLUME * 1000))))
+        for name in self.files:
+            mci(f'setaudio {name} volume to {volume}', None, 0, None)
         mode, loops = ctypes.create_unicode_buffer(32), set()
         def send(command, name):
             loops.discard(name)
@@ -903,6 +910,12 @@ class Sound:
         player = shutil.which('paplay') or shutil.which('aplay')
         if not player:
             return
+        player_name = os.path.basename(player)
+        volume_args = []
+        if player_name == 'paplay':
+            volume = max(0, min(65536, int(round(SOUND_VOLUME * 65536))))
+            volume_args = [f'--volume={volume}']
+        # aplay has no reliable per-process volume option; it uses the system output level.
         playing, loops = {}, set()
         def send(command, name):
             old, _ = playing.pop(name, (None, 0))
@@ -910,7 +923,8 @@ class Sound:
                 old.terminate()
             loops.discard(name)
             if command != 'stop':
-                process = subprocess.Popen([player, self.files[name]], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                process = subprocess.Popen([player, *volume_args, self.files[name]],
+                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 playing[name] = (process, time.monotonic())
                 if command == 'loop':
                     loops.add(name)
